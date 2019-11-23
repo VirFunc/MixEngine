@@ -1,16 +1,18 @@
 ﻿#pragma once
 #ifndef MX_GPU_PARAM_H_
 #define MX_GPU_PARAM_H_
-#include <string>
+#include "../Definitions/MxDefinitions.h"
 #include "../Definitions/MxTypes.h"
-#include <map>
-#include <utility>
-#include "../Definitions/MxCommonEnum.h"
-#include "MxSampler.h"
 #include "../Math/MxVector2.h"
 #include "../Math/MxMatrix4.h"
 #include "../Math/MxColor.h"
+#include "MxSampler.h"
+
+#include <string>
+#include <map>
 #include <optional>
+#include "MxGPUParams.h"
+#include "MxGPUParamBlockBuffer.h"
 
 namespace Mix {
     enum class GPUParamType {
@@ -18,7 +20,8 @@ namespace Mix {
         Texture,
         Buffer,
         Sampler,
-        Count
+        Count,
+        Unknown = Count
     };
 
     const char* ToString(GPUParamType e);
@@ -96,14 +99,13 @@ namespace Mix {
     struct GPUParamDataDesc {
         std::string name;
         GPUParamDataType type;
-        uint32 elementSize;
+        uint32 sizeInByte;
         uint32 arraySize;
-        uint32 arrayElementStride;
+        uint32 arrayElementStrideInByte;
 
         uint32 paramBlockSet;
         uint32 paramBlockBinding;
 
-        uint32 gpuMemOffset;
         uint32 cpuMemOffset;
     };
 
@@ -184,17 +186,51 @@ namespace Mix {
         }
 
     private:
-        GPUParams* mParent;
+        GPUParams* mParent = nullptr;
         GPUParamDataDesc* mParamDesc = nullptr;
     };
 
     template <typename _Ty>
     void TGPUParamData<_Ty>::set(const _Ty& _value, uint32 _arrayIdx) {
-        //todo GPUParamData set(...)
+        if (mParent == nullptr)
+            return;
+
+        auto paramBlock = mParent->getParamBlockBuffer(mParamDesc->paramBlockSet, mParamDesc->paramBlockBinding);
+        if (paramBlock == nullptr)
+            return;
+
+#ifdef MX_DEBUG_MODE
+        if (_arrayIdx >= mParamDesc->arraySize) {
+            MX_LOG_ERROR("Array index out of range.");
+            return;
+        }
+#endif
+        auto size = std::min(mParamDesc->sizeInByte, uint32(sizeof(_Ty)));
+        paramBlock->setData(&_value, mParamDesc->cpuMemOffset + _arrayIdx * mParamDesc->arrayElementStrideInByte, size);
+
+        mParent->_markDirty();
     }
 
     template <typename _Ty>
     _Ty TGPUParamData<_Ty>::get(uint32 _arrayIdx) const {
+        if (mParent == nullptr)
+            return _Ty();
+
+        auto paramBlock = mParent->getParamBlockBuffer(mParamDesc->paramBlockSet, mParamDesc->paramBlockBinding);
+        if (paramBlock == nullptr)
+            return;
+
+#ifdef MX_DEBUG_MODE
+        if (_arrayIdx >= mParamDesc->arraySize) {
+            MX_LOG_ERROR("Array index out of range.");
+            return;
+        }
+#endif
+        _Ty value;
+        auto size = std::min(mParamDesc->sizeInByte, uint32(sizeof(_Ty)));
+        paramBlock->getData(&value, mParamDesc->cpuMemOffset + _arrayIdx * mParamDesc->arrayElementStrideInByte, size);
+
+        return value;
     }
 
     using GPUParamFloat = TGPUParamData<float>;
@@ -221,7 +257,7 @@ namespace Mix {
         }
 
 
-        void set(const void* _vaule, uint32 _size, uint32 _arrayIdx = 0);
+        void set(const void* const _value, uint32 _size, uint32 _arrayIdx = 0);
 
         void get(void* _value, uint32 _size, uint32 _arrayIdx = 0);
 
@@ -238,7 +274,7 @@ namespace Mix {
         }
 
     private:
-        GPUParams* mParent;
+        GPUParams* mParent = nullptr;
         GPUParamDataDesc* mParamDesc = nullptr;
     };
 
@@ -276,7 +312,7 @@ namespace Mix {
         }
 
     private:
-        GPUParams* mParent;
+        GPUParams* mParent = nullptr;
         GPUParamObjectDesc* mParamDesc = nullptr;
     };
 
@@ -286,7 +322,7 @@ namespace Mix {
         GPUParamBuffer() = default;
 
         GPUParamBuffer(GPUParamObjectDesc* _paramDesc, GPUParams* _parent) :
-            mParent(std::move(_parent)),
+            mParent(_parent),
             mParamDesc(_paramDesc) {
         }
 
@@ -305,7 +341,7 @@ namespace Mix {
         }
 
     private:
-        GPUParams* mParent;
+        GPUParams* mParent = nullptr;
 
         GPUParamObjectDesc* mParamDesc = nullptr;
     };
@@ -316,7 +352,7 @@ namespace Mix {
         GPUParamSampler() = default;
 
         GPUParamSampler(GPUParamObjectDesc* _paramDesc, GPUParams* _parent) :
-            mParent(std::move(_parent)),
+            mParent(_parent),
             mParamDesc(_paramDesc) {
         }
 
@@ -335,7 +371,7 @@ namespace Mix {
         }
 
     private:
-        GPUParams* mParent;
+        GPUParams* mParent = nullptr;
         GPUParamObjectDesc* mParamDesc = nullptr;
     };
 }

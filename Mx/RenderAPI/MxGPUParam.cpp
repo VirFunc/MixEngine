@@ -58,13 +58,68 @@ namespace Mix {
         }
     }
 
-    void GPUParamStruct::set(const void* _vaule, uint32 _size, uint32 _arrayIdx) {
+    void GPUParamStruct::set(const void* const _value, uint32 _size, uint32 _arrayIdx) {
+        MX_ASSERT(_value && "Source buffer CAN NOT be NULL");
+
+        if (mParent == nullptr)
+            return;
+
+        auto paramBlock = mParent->getParamBlockBuffer(mParamDesc->paramBlockSet, mParamDesc->paramBlockBinding);
+        if (paramBlock == nullptr)
+            return;
+
+#ifdef MX_DEBUG_MODE
+
+        if (_size > mParamDesc->sizeInByte) {
+            MX_LOG_WARNING("Provided buffer size is larger than the parameter size. Data will be truncated.")
+        }
+
+        if (_arrayIdx > mParamDesc->arraySize) {
+            MX_LOG_ERROR("Array index out of range");
+            return;
+        }
+
+#endif
+
+        auto size = std::min(mParamDesc->sizeInByte, _size);
+
+        paramBlock->setData(_value, mParamDesc->cpuMemOffset + _arrayIdx * mParamDesc->arrayElementStrideInByte, size);
+
+        mParent->_markDirty();
     }
 
     void GPUParamStruct::get(void* _value, uint32 _size, uint32 _arrayIdx) {
+        MX_ASSERT(_value && "Destination buffer CAN NOT be NULL");
+
+        if (mParent == nullptr)
+            return;
+
+        auto paramBlock = mParent->getParamBlockBuffer(mParamDesc->paramBlockSet, mParamDesc->paramBlockBinding);
+        if (paramBlock == nullptr)
+            return;
+
+#ifdef MX_DEBUG_MODE
+
+        if (_size > mParamDesc->sizeInByte) {
+            MX_LOG_WARNING("Provided buffer size is smaller than the parameter size. Data will be truncated.")
+        }
+
+        if (_arrayIdx > mParamDesc->arraySize) {
+            MX_LOG_ERROR("Array index out of range");
+            return;
+        }
+
+#endif
+
+        auto size = std::min(mParamDesc->sizeInByte, _size);
+
+        paramBlock->getData(_value, mParamDesc->cpuMemOffset + _arrayIdx * mParamDesc->arrayElementStrideInByte, size);
     }
 
     uint32 GPUParamStruct::getElementSize() const {
+        if (mParamDesc)
+            return mParamDesc->sizeInByte;
+        return 0;
     }
 
     void GPUParamTexture::set(const std::shared_ptr<Texture>& _texture) {

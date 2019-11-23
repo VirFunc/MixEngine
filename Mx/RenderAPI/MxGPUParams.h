@@ -8,6 +8,10 @@
 #include <array>
 
 namespace Mix {
+
+    class GPUParamBlockBuffer;
+
+
     template<typename _Ty> struct GPUDataParamTypeTraits { enum { TypeId = GPUParamDataType::Struct }; using Type = _Ty; };
 
     template<> struct GPUDataParamTypeTraits<bool> { enum { TypeId = GPUParamDataType::Bool }; using Type = bool; };
@@ -37,7 +41,6 @@ namespace Mix {
         std::shared_ptr<GPUProgramParamDesc> computeParams;
     };
 
-
     class PipelineParamsInfo {
     public:
         virtual ~PipelineParamsInfo() = default;
@@ -48,11 +51,15 @@ namespace Mix {
 
         uint32 getElementCount(GPUParamType _type) { return mElementCountPerType[size_t(_type)]; }
 
-        std::optional<GPUParamLocation> getLocation(GPUProgramType _program, GPUParamType _type, const std::string& _name);
+        GPUParamLocation getLocation(GPUProgramType _program, GPUParamType _type, const std::string& _name);
 
         const GPUParamDescBase* getParamDesc(uint32 _set, uint32 _binding, GPUParamType _type) const;
 
-        std::optional<GPUParamType> getParamType(uint32 _set, uint32 _binding) const;
+        GPUParamType getParamType(uint32 _set, uint32 _binding) const;
+
+        uint32 getUniqueIndex(GPUParamType _type, uint32 _set, uint32 _binding);
+
+        GPUParamLocation getLocation(GPUParamType _type, uint32 _index);
 
         std::shared_ptr<GPUProgramParamDesc> getProgramParamDesc(GPUProgramType _program) const;
 
@@ -73,6 +80,8 @@ namespace Mix {
         /** Used to record the information in a single set */
         struct BindingInfo {
             GPUParamType type;
+            /** The index of each binding. Each index of an object is unique among objects of the same type, which can be used to identify an object */
+            uint32 index;
             const GPUParamDescBase* paramDesc;
         };
 
@@ -88,6 +97,7 @@ namespace Mix {
 
         uint32 mElementCount = 0;
         std::array<uint32, size_t(GPUParamType::Count)> mElementCountPerType;
+        std::array<GPUParamLocation*, size_t(GPUParamType::Count)> mLocationInfo;
 
         /** We use this as a buffer from which the memory used to store set infos will be allocated */
         std::vector<std::byte> mBuffer;
@@ -128,6 +138,8 @@ namespace Mix {
 
         void setSampler(GPUProgramType _program, const std::string& _name, const SamplerDesc& _sampler);
 
+        std::shared_ptr<GPUParamBlockBuffer> getParamBlockBuffer(uint32 _set, uint32 _binding);
+
         std::shared_ptr<Texture> getTexture(uint32 _set, uint32 _binding) const;
 
         std::shared_ptr<GPUBuffer> getBuffer(uint32 _set, uint32 _binding) const;
@@ -147,6 +159,10 @@ namespace Mix {
 
         std::shared_ptr<PipelineParamsInfo> mParamsInfo;
 
+        std::vector<std::shared_ptr<GPUParamBlockBuffer>> mParamBlockBuffers;
+        std::vector<std::shared_ptr<Texture>> mTextures;
+        std::vector<std::shared_ptr<GPUBuffer>> mBuffers;
+        std::vector<SamplerDesc> mSamplers;
     };
 
     template <typename _Ty>

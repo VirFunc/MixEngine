@@ -17,7 +17,7 @@ namespace Mix {
 
         virtual void getData(void* _dst, uint32_t _offset, uint32_t _size, uint32_t _queueIdx = 0) = 0;
 
-        virtual void setData(void* _src, uint32_t _offset, uint32_t _size, uint32_t _queueIdx = 0) = 0;
+        virtual void setData(void const * const _src, uint32_t _offset, uint32_t _size, uint32_t _queueIdx = 0) = 0;
 
         virtual void copyData(GPUBuffer& _src, uint32_t _srcOffset, uint32_t _dstOffset, uint32_t _size) = 0;
 

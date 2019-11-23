@@ -86,24 +86,41 @@ namespace Mix {
         }
 
         // Calculate the size of buffer
-
+        auto totalBindingCount = std::accumulate(bindingCountPerSet.begin(), bindingCountPerSet.end(), uint32(0));
         auto setInfoBufferSize = mSetCount * sizeof SetInfo;
-        auto bindingInfoBufferSize = sizeof(BindingInfo) * std::accumulate(bindingCountPerSet.begin(), bindingCountPerSet.end(), 0);
-        mBuffer.resize(setInfoBufferSize + bindingInfoBufferSize);
+        auto bindingInfoBufferSize = sizeof(BindingInfo) * totalBindingCount;
+        auto locationInfoBufferSize = sizeof(GPUParamLocation) * totalBindingCount;
 
-        std::byte* pt = mBuffer.data();
-        mSetInfos = new (pt) SetInfo[mSetCount];
-        pt += setInfoBufferSize;
+        mBuffer.resize(setInfoBufferSize + bindingInfoBufferSize + locationInfoBufferSize);
 
-        for (uint32 i = 0; i < mSetCount; ++i) {
-            mSetInfos[i].bindingCount = bindingCountPerSet[i];
-            mSetInfos[i].bindingInfo = new (pt) BindingInfo[mSetInfos[i].bindingCount];
-            pt += sizeof(BindingInfo) * mSetInfos[i].bindingCount;
+        std::byte* p = mBuffer.data();
+
+        {
+            mSetInfos = new (p) SetInfo[mSetCount];
+            p += setInfoBufferSize;
+
+            for (uint32 i = 0; i < mSetCount; ++i) {
+                mSetInfos[i].bindingCount = bindingCountPerSet[i];
+                mSetInfos[i].bindingInfo = new (p) BindingInfo[mSetInfos[i].bindingCount];
+                p += sizeof(BindingInfo) * mSetInfos[i].bindingCount;
+            }
+
+            for (uint32 i = 0; i < mLocationInfo.size(); ++i) {
+                mLocationInfo[i] = new (p) GPUParamLocation[bindingCountPerSet[i]];
+                p += sizeof(GPUParamLocation) * bindingCountPerSet[i];
+            }
         }
 
+        std::array<uint32, size_t(GPUParamType::Count)> elementIndices{};
+
         auto populateBindingInfo = [&](auto& _entry, GPUParamType _type) {
+            auto index = elementIndices[size_t(_type)]++;
+            mSetInfos[_entry.set].bindingInfo[_entry.binding].index = index;
             mSetInfos[_entry.set].bindingInfo[_entry.binding].type = _type;
             mSetInfos[_entry.set].bindingInfo[_entry.binding].paramDesc = &_entry;
+
+            mLocationInfo[size_t(_type)][index].set = _entry.set;
+            mLocationInfo[size_t(_type)][index].binding = _entry.binding;
         };
 
         for (const auto& desc : mParamsDesc) {
@@ -121,7 +138,7 @@ namespace Mix {
         }
     }
 
-    std::optional<GPUParamLocation> PipelineParamsInfo::getLocation(GPUProgramType _program, GPUParamType _type, const std::string& _name) {
+    GPUParamLocation PipelineParamsInfo::getLocation(GPUProgramType _program, GPUParamType _type, const std::string& _name) {
         auto desc = getProgramParamDesc(_program);
         bool found = desc != nullptr;
         GPUParamLocation location;
@@ -156,10 +173,10 @@ namespace Mix {
             }
         }
 
-        if(found)
+        if (found)
             return location;
         else
-            return std::nullopt;
+            return GPUParamLocation();
     }
 
     const GPUParamDescBase* PipelineParamsInfo::getParamDesc(uint32 _set, uint32 _binding, GPUParamType _type) const {
@@ -186,22 +203,59 @@ namespace Mix {
         return mSetInfos[_set].bindingInfo[_binding].paramDesc;
     }
 
-    std::optional<GPUParamType> PipelineParamsInfo::getParamType(uint32 _set, uint32 _binding) const {
-#       ifdef MX_DEBUG_MODE
+    GPUParamType PipelineParamsInfo::getParamType(uint32 _set, uint32 _binding) const {
+#   ifdef MX_DEBUG_MODE
 
         if (_set >= mSetCount) {
             MX_LOG_ERROR("GPU parameter set index out of range");
-            return std::nullopt;
+            return GPUParamType::Unknown;
         }
 
         if (_set >= mSetInfos[_set].bindingCount) {
             MX_LOG_ERROR("GPU parameter binding index out of range");
-            return std::nullopt;
+            return GPUParamType::Unknown;
         }
 
 #   endif
 
         return mSetInfos[_set].bindingInfo[_binding].type;
+    }
+
+    uint32 PipelineParamsInfo::getUniqueIndex(GPUParamType _type, uint32 _set, uint32 _binding) {
+#   ifdef MX_DEBUG_MODE
+
+        if (_set >= mSetCount) {
+            MX_LOG_ERROR("GPU parameter set index out of range");
+            return uint32(-1);
+        }
+
+        if (_set >= mSetInfos[_set].bindingCount) {
+            MX_LOG_ERROR("GPU parameter binding index out of range");
+            return uint32(-1);
+        }
+
+        auto bindingType = mSetInfos[_set].bindingInfo[_binding].type;
+        if (_type != bindingType && bindingType != GPUParamType::Sampler) {
+            MX_LOG_ERROR("Requested parameter type does not match. Requested:[%1%], Actual:[%2%]", ToString(_type), ToString(bindingType))
+                return uint32(-1);
+        }
+
+#   endif
+
+        return mSetInfos[_set].bindingInfo[_binding].index;
+    }
+
+    GPUParamLocation PipelineParamsInfo::getLocation(GPUParamType _type, uint32 _index) {
+#   ifdef MX_DEBUG_MODE
+
+        if (_index >= mElementCountPerType[size_t(_type)]) {
+            MX_LOG_ERROR("GPU parameter unique index out of range");
+            return GPUParamLocation();
+        }
+
+#   endif
+
+        return mLocationInfo[size_t(_type)][_index];
     }
 
     std::shared_ptr<GPUProgramParamDesc> PipelineParamsInfo::getProgramParamDesc(GPUProgramType _program) const {
@@ -329,14 +383,37 @@ namespace Mix {
         param.set(_sampler);
     }
 
+    std::shared_ptr<GPUParamBlockBuffer> GPUParams::getParamBlockBuffer(uint32 _set, uint32 _binding) {
+        auto index = mParamsInfo->getUniqueIndex(GPUParamType::ParamBlock, _set, _binding);
+        if (index == uint32(-1))
+            return nullptr;
+
+        return mParamBlockBuffers[index];
+    }
+
 
     std::shared_ptr<Texture> GPUParams::getTexture(uint32 _set, uint32 _binding) const {
+        auto index = mParamsInfo->getUniqueIndex(GPUParamType::Texture, _set, _binding);
+        if (index == uint32(-1))
+            return nullptr;
+
+        return mTextures[index];
     }
 
     std::shared_ptr<GPUBuffer> GPUParams::getBuffer(uint32 _set, uint32 _binding) const {
+        auto index = mParamsInfo->getUniqueIndex(GPUParamType::Buffer, _set, _binding);
+        if (index == uint32(-1))
+            return nullptr;
+
+        return mBuffers[index];
     }
 
     std::optional<SamplerDesc> GPUParams::getSampler(uint32 _set, uint32 _binding) const {
+        auto index = mParamsInfo->getUniqueIndex(GPUParamType::Sampler, _set, _binding);
+        if (index == uint32(-1))
+            return std::nullopt;
+
+        return mSamplers[index];
     }
 
     void GPUParams::setTexture(uint32 _set, uint32 _binding, const std::shared_ptr<Texture>& _texture) {
