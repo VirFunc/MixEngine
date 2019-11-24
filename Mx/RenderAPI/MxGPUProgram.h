@@ -17,7 +17,7 @@ namespace Mix {
         std::vector<std::byte> binaryCode;
     };
 
-    class GPUProgramParamDesc;
+    struct GPUProgramParamDesc;
     class VertexDeclaration;
 
     class GPUProgram {

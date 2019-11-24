@@ -4,15 +4,15 @@
 #include <numeric>
 
 namespace Mix {
-    std::shared_ptr<PipelineParamsInfo> PipelineParamsInfo::Create(const GraphicsParamsDesc& _desc) {
-        return RenderStateManager::Get()->createPipelineParamsInfo(_desc);
+    std::shared_ptr<GPUPipelineParamsInfo> GPUPipelineParamsInfo::Create(const GraphicsParamsDesc& _desc) {
+        return RenderStateManager::Get()->createGPUPipelineParamsInfo(_desc);
     }
 
-    std::shared_ptr<PipelineParamsInfo> PipelineParamsInfo::Create(const ComputeParamsDesc& _desc) {
-        return RenderStateManager::Get()->createPipelineParamsInfo(_desc);
+    std::shared_ptr<GPUPipelineParamsInfo> GPUPipelineParamsInfo::Create(const ComputeParamsDesc& _desc) {
+        return RenderStateManager::Get()->createGPUPipelineParamsInfo(_desc);
     }
 
-    PipelineParamsInfo::PipelineParamsInfo(const GraphicsParamsDesc& _desc) {
+    GPUPipelineParamsInfo::GPUPipelineParamsInfo(const GraphicsParamsDesc& _desc) {
         std::array<std::shared_ptr<GPUProgramParamDesc>, 6> descs;
         auto[vert, frag, geom, tesse, tessc] = _desc;
 
@@ -32,7 +32,7 @@ namespace Mix {
         buildUp(descs);
     }
 
-    PipelineParamsInfo::PipelineParamsInfo(const ComputeParamsDesc& _desc) {
+    GPUPipelineParamsInfo::GPUPipelineParamsInfo(const ComputeParamsDesc& _desc) {
         std::array<std::shared_ptr<GPUProgramParamDesc>, 6> descs;
 
         descs[size_t(GPUProgramType::Vertex)] = nullptr;
@@ -46,7 +46,7 @@ namespace Mix {
         buildUp(descs);
     }
 
-    void PipelineParamsInfo::buildUp(const std::array<std::shared_ptr<GPUProgramParamDesc>, 6>& _descs) {
+    void GPUPipelineParamsInfo::buildUp(const std::array<std::shared_ptr<GPUProgramParamDesc>, 6>& _descs) {
         mParamsDesc = _descs;
 
         auto countFunc = [&](const auto& _entry, GPUParamType _type) {
@@ -138,7 +138,7 @@ namespace Mix {
         }
     }
 
-    GPUParamLocation PipelineParamsInfo::getLocation(GPUProgramType _program, GPUParamType _type, const std::string& _name) {
+    GPUParamLocation GPUPipelineParamsInfo::getLocation(GPUProgramType _program, GPUParamType _type, const std::string& _name) {
         auto desc = getProgramParamDesc(_program);
         bool found = desc != nullptr;
         GPUParamLocation location;
@@ -179,7 +179,7 @@ namespace Mix {
             return GPUParamLocation();
     }
 
-    const GPUParamDescBase* PipelineParamsInfo::getParamDesc(uint32 _set, uint32 _binding, GPUParamType _type) const {
+    const GPUParamDescBase* GPUPipelineParamsInfo::getParamDesc(uint32 _set, uint32 _binding, GPUParamType _type) const {
 #   ifdef MX_DEBUG_MODE
 
         if (_set >= mSetCount) {
@@ -203,7 +203,7 @@ namespace Mix {
         return mSetInfos[_set].bindingInfo[_binding].paramDesc;
     }
 
-    GPUParamType PipelineParamsInfo::getParamType(uint32 _set, uint32 _binding) const {
+    GPUParamType GPUPipelineParamsInfo::getParamType(uint32 _set, uint32 _binding) const {
 #   ifdef MX_DEBUG_MODE
 
         if (_set >= mSetCount) {
@@ -221,7 +221,7 @@ namespace Mix {
         return mSetInfos[_set].bindingInfo[_binding].type;
     }
 
-    uint32 PipelineParamsInfo::getUniqueIndex(GPUParamType _type, uint32 _set, uint32 _binding) {
+    uint32 GPUPipelineParamsInfo::getUniqueIndex(GPUParamType _type, uint32 _set, uint32 _binding) {
 #   ifdef MX_DEBUG_MODE
 
         if (_set >= mSetCount) {
@@ -245,7 +245,7 @@ namespace Mix {
         return mSetInfos[_set].bindingInfo[_binding].index;
     }
 
-    GPUParamLocation PipelineParamsInfo::getLocation(GPUParamType _type, uint32 _index) {
+    GPUParamLocation GPUPipelineParamsInfo::getLocation(GPUParamType _type, uint32 _index) {
 #   ifdef MX_DEBUG_MODE
 
         if (_index >= mElementCountPerType[size_t(_type)]) {
@@ -258,7 +258,7 @@ namespace Mix {
         return mLocationInfo[size_t(_type)][_index];
     }
 
-    std::shared_ptr<GPUProgramParamDesc> PipelineParamsInfo::getProgramParamDesc(GPUProgramType _program) const {
+    std::shared_ptr<GPUProgramParamDesc> GPUPipelineParamsInfo::getProgramParamDesc(GPUProgramType _program) const {
         return mParamsDesc[size_t(_program)];
     }
 
@@ -416,19 +416,61 @@ namespace Mix {
         return mSamplers[index];
     }
 
+    void GPUParams::setParamBlockBuffer(uint32 _set, uint32 _binding, const std::shared_ptr<GPUParamBlockBuffer>& _paramBlock) {
+        auto index = mParamsInfo->getUniqueIndex(GPUParamType::ParamBlock, _set, _binding);
+        if (index == uint32(-1))
+            return;
+
+        mParamBlockBuffers[index] = _paramBlock;
+        _markDirty();
+    }
+
     void GPUParams::setTexture(uint32 _set, uint32 _binding, const std::shared_ptr<Texture>& _texture) {
+        auto index = mParamsInfo->getUniqueIndex(GPUParamType::Texture, _set, _binding);
+        if (index == uint32(-1))
+            return;
+
+        mTextures[index] = _texture;
+        _markDirty();
     }
 
     void GPUParams::setBuffer(uint32 _set, uint32 _binding, const std::shared_ptr<GPUBuffer>& _buffer) {
+        auto index = mParamsInfo->getUniqueIndex(GPUParamType::Buffer, _set, _binding);
+        if (index == uint32(-1))
+            return;
+
+        mBuffers[index] = _buffer;
+        _markDirty();
     }
 
     void GPUParams::setSampler(uint32 _set, uint32 _binding, const SamplerDesc& _sampler) {
+        auto index = mParamsInfo->getUniqueIndex(GPUParamType::Sampler, _set, _binding);
+        if (index == uint32(-1))
+            return;
+
+        mSamplers[index] = _sampler;
+        _markDirty();
     }
 
     void GPUParams::_markDirty() {
     }
 
-    GPUParams::GPUParams(const std::shared_ptr<PipelineParamsInfo>& _paramsInfo) {
+    std::shared_ptr<GPUParams> GPUParams::Create(const std::shared_ptr<GPUPipelineParamsInfo>& _info) {
+        RenderStateManager::Get()->createGPUParams(_info);
+    }
+
+    GPUParams::GPUParams(const std::shared_ptr<GPUPipelineParamsInfo>& _paramsInfo) {
+        mParamsInfo = _paramsInfo;
+
+        uint32 paramBlockCount = _paramsInfo->getElementCount(GPUParamType::ParamBlock);
+        uint32 textureCount = _paramsInfo->getElementCount(GPUParamType::Texture);
+        uint32 bufferCount = _paramsInfo->getElementCount(GPUParamType::Buffer);
+        uint32 samplerCount = _paramsInfo->getElementCount(GPUParamType::Sampler);
+
+        mParamBlockBuffers.resize(paramBlockCount);
+        mTextures.resize(textureCount);
+        mBuffers.resize(bufferCount);
+        mSamplers.resize(samplerCount);
     }
 
 

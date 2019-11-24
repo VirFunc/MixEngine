@@ -43,6 +43,14 @@ namespace Mix {
             : Exception("[ERROR] Failed to initialize [%1%]", _libName) {
         }
     };
+
+
+    class ModuleError final : public Exception {
+    public:
+        explicit ModuleError(const std::string& _describe)
+            :Exception(_describe) {
+        }
+    };
 }
 
 #ifndef MX_EXCEPT

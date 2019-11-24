@@ -52,8 +52,6 @@ namespace Mix {
             std::string getApiName() const override;
 
             std::shared_ptr<CommandBuffer> getMainCmdBuffer() const override;
-        
-            void init() override;
 
             static std::vector<vk::ExtensionProperties> GetAllSupportedInstanceExts();
 
@@ -109,6 +107,7 @@ namespace Mix {
             VertexInputManager& getVertexInputManager() { return *mVertexInputManager; }
 
         private:
+            void init() override;
             void build();
             void createInstance();
             void pickPhysicalDevice();

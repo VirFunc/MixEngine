@@ -3,16 +3,19 @@
 #include "MxGPUParams.h"
 
 namespace Mix {
-
-    RenderStateManager* RenderStateManager::Get() {
-        return MixEngine::Instance().getModule<RenderStateManager>();
+    std::shared_ptr<GPUPipelineParamsInfo> RenderStateManager::createGPUPipelineParamsInfo(const GraphicsParamsDesc& _desc) const {
+        return std::shared_ptr<GPUPipelineParamsInfo>(new GPUPipelineParamsInfo(_desc));
     }
 
-    std::shared_ptr<PipelineParamsInfo> RenderStateManager::createPipelineParamsInfo(const GraphicsParamsDesc& _desc) const {
-        return std::shared_ptr<PipelineParamsInfo>(new PipelineParamsInfo(_desc));
+    std::shared_ptr<GPUPipelineParamsInfo> RenderStateManager::createGPUPipelineParamsInfo(const ComputeParamsDesc& _desc) const {
+        return std::shared_ptr<GPUPipelineParamsInfo>(new GPUPipelineParamsInfo(_desc));
     }
 
-    std::shared_ptr<PipelineParamsInfo> RenderStateManager::createPipelineParamsInfo(const ComputeParamsDesc& _desc) const {
-        return std::shared_ptr<PipelineParamsInfo>(new PipelineParamsInfo(_desc));
+    std::shared_ptr<GPUParams> RenderStateManager::createGPUParams(const std::shared_ptr<GPUPipelineParamsInfo>& _info) const {
+        return std::shared_ptr<GPUParams>(new GPUParams(_info));
+    }
+
+    std::shared_ptr<GraphicsPipelineState> RenderStateManager::createGraphicsPipelineState(const GraphicsPipelineStateDesc& _desc) {
+        return std::shared_ptr<GraphicsPipelineState>(new GraphicsPipelineState(_desc));
     }
 }

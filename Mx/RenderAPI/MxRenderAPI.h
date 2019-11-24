@@ -17,15 +17,13 @@ namespace Mix {
     struct IndexBufferDesc;
     struct GraphicsPipelineStateDesc;
 
-    class RenderAPI {
+    class RenderAPI :public GeneralBase::NoCopyBase {
     public:
-        static RenderAPI* Get();
-
         virtual ~RenderAPI() = default;
 
         virtual std::string getApiName() const = 0;
 
-        virtual std::shared_ptr<CommandBuffer> createCommandBuffer(GPUQueueType _type, uint32_t _queueIdx = 0, bool _secondary = false) = 0;
+       /* virtual std::shared_ptr<CommandBuffer> createCommandBuffer(GPUQueueType _type, uint32_t _queueIdx = 0, bool _secondary = false) = 0;
 
         virtual std::shared_ptr<GPUBuffer> createGPUBuffer(const GPUBufferDesc& _desc) = 0;
 
@@ -33,11 +31,11 @@ namespace Mix {
 
         virtual std::shared_ptr<IndexBuffer> createIndexBuffer(const IndexBufferDesc& _desc) = 0;
 
-        virtual std::shared_ptr<GraphicsPipelineState> createGraphicsPipeline(const GraphicsPipelineStateDesc& _desc) = 0;
+        virtual std::shared_ptr<GraphicsPipelineState> createGraphicsPipeline(const GraphicsPipelineStateDesc& _desc) = 0; */
 
-        std::shared_ptr<GPUProgram> createGPUProgram(const GPUProgramDesc& _desc) const;
+        /*std::shared_ptr<GPUProgram> createGPUProgram(const GPUProgramDesc& _desc) const;
 
-        GPUProgramManager& getGPUProgramManager() { return mGPUProgramManager; }
+        GPUProgramManager& getGPUProgramManager() { return mGPUProgramManager; }*/
 
         /*virtual void setRenderTarget(const std::shared_ptr<RenderTarget>& _target,
                                      const std::shared_ptr<CommandBuffer>& _cmd = nullptr) = 0;
@@ -80,8 +78,6 @@ namespace Mix {
 
         std::shared_ptr<RenderTarget> mActiveRenderTarget;
         bool renderTargetChanged = false;
-
-        GPUProgramManager mGPUProgramManager;
     };
 
 }

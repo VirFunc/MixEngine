@@ -41,9 +41,9 @@ namespace Mix {
         std::shared_ptr<GPUProgramParamDesc> computeParams;
     };
 
-    class PipelineParamsInfo {
+    class GPUPipelineParamsInfo {
     public:
-        virtual ~PipelineParamsInfo() = default;
+        virtual ~GPUPipelineParamsInfo() = default;
 
         uint32 getSetCount() const { return mSetCount; }
 
@@ -63,16 +63,16 @@ namespace Mix {
 
         std::shared_ptr<GPUProgramParamDesc> getProgramParamDesc(GPUProgramType _program) const;
 
-        static std::shared_ptr<PipelineParamsInfo> Create(const GraphicsParamsDesc& _desc);
+        static std::shared_ptr<GPUPipelineParamsInfo> Create(const GraphicsParamsDesc& _desc);
 
-        static std::shared_ptr<PipelineParamsInfo> Create(const ComputeParamsDesc& _desc);
+        static std::shared_ptr<GPUPipelineParamsInfo> Create(const ComputeParamsDesc& _desc);
 
     private:
         friend class RenderStateManager;
 
-        explicit PipelineParamsInfo(const GraphicsParamsDesc& _desc);
+        explicit GPUPipelineParamsInfo(const GraphicsParamsDesc& _desc);
 
-        explicit PipelineParamsInfo(const ComputeParamsDesc& _desc);
+        explicit GPUPipelineParamsInfo(const ComputeParamsDesc& _desc);
 
         void buildUp(const std::array<std::shared_ptr<GPUProgramParamDesc>, 6>& _descs);
 
@@ -146,6 +146,8 @@ namespace Mix {
 
         std::optional<SamplerDesc> getSampler(uint32 _set, uint32 _binding) const;
 
+        virtual void setParamBlockBuffer(uint32 _set, uint32 _binding, const std::shared_ptr<GPUParamBlockBuffer>& _paramBlock);
+
         virtual void setTexture(uint32 _set, uint32 _binding, const std::shared_ptr<Texture>& _texture);
 
         virtual void setBuffer(uint32 _set, uint32 _binding, const std::shared_ptr<GPUBuffer>& _buffer);
@@ -154,10 +156,14 @@ namespace Mix {
 
         virtual void _markDirty();
 
-    protected:
-        explicit GPUParams(const std::shared_ptr<PipelineParamsInfo>& _paramsInfo);
+        static std::shared_ptr<GPUParams> Create(const std::shared_ptr<GPUPipelineParamsInfo>& _info);
 
-        std::shared_ptr<PipelineParamsInfo> mParamsInfo;
+    protected:
+        friend class RenderStateManager;
+
+        explicit GPUParams(const std::shared_ptr<GPUPipelineParamsInfo>& _paramsInfo);
+
+        std::shared_ptr<GPUPipelineParamsInfo> mParamsInfo;
 
         std::vector<std::shared_ptr<GPUParamBlockBuffer>> mParamBlockBuffers;
         std::vector<std::shared_ptr<Texture>> mTextures;

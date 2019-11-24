@@ -25,8 +25,7 @@ namespace Mix {
         void load() override;
         void init() override {}
 
-        // todo
-        bool anyKeyDown();
+        bool anyKeyDown() const;
 
         float getAxis(AxisCode _axis, int32_t _id = -1) const;
         Vector2f getGamepadLeftStickAxis(int32_t _id = -1) const;
@@ -39,6 +38,7 @@ namespace Mix {
         const Vector2i& getMouseWheelScrollDelta() const;
         const Vector2i& getMousePosition() const;
         const Vector2i& getMousePositionDelta() const;
+        // TODO 
         bool isMouseDoubleClick() const;
 
         void nextFrame();

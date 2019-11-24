@@ -5,21 +5,27 @@
 
 
 namespace Mix {
-    class PipelineParamsInfo;
+    class GPUPipelineParamsInfo;
+    class GPUParams;
+    class GraphicsPipelineState;
+    struct GraphicsPipelineStateDesc;
     struct GraphicsParamsDesc;
     struct ComputeParamsDesc;
 
-    class RenderStateManager :public ModuleBase {
+    class RenderStateManager :public TModule<RenderStateManager> {
     public:
-        static RenderStateManager* Get();
-
         RenderStateManager() = default;
 
-        virtual std::shared_ptr<PipelineParamsInfo> createPipelineParamsInfo(const GraphicsParamsDesc& _desc) const;
+        virtual std::shared_ptr<GPUPipelineParamsInfo> createGPUPipelineParamsInfo(const GraphicsParamsDesc& _desc) const;
 
-        virtual std::shared_ptr<PipelineParamsInfo> createPipelineParamsInfo(const ComputeParamsDesc& _desc) const;
+        virtual std::shared_ptr<GPUPipelineParamsInfo> createGPUPipelineParamsInfo(const ComputeParamsDesc& _desc) const;
+
+        virtual std::shared_ptr<GPUParams> createGPUParams(const std::shared_ptr<GPUPipelineParamsInfo>& _info) const;
+
+        virtual std::shared_ptr<GraphicsPipelineState> createGraphicsPipelineState(const GraphicsPipelineStateDesc& _desc);
 
     private:
+
     };
 }
 

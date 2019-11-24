@@ -28,7 +28,7 @@ namespace Mix {
         Platform::GamepadDeviceEvent.connect(std::bind(&Input::onGamepadDevice, this, _1));
     }
 
-    bool Input::anyKeyDown() {
+    bool Input::anyKeyDown() const {
         return mAnyKeyDown;
     }
 

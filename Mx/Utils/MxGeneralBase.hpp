@@ -22,6 +22,7 @@ namespace Mix::GeneralBase {
 
     struct NoCopyAndMoveBase {
         NoCopyAndMoveBase(const NoCopyAndMoveBase&) = delete;
+        NoCopyBase& operator=(NoCopyBase&&) = delete;
 
     protected:
         NoCopyAndMoveBase() = default;

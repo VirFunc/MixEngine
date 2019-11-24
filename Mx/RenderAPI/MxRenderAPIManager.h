@@ -8,10 +8,8 @@ namespace Mix {
     class RenderAPI;
     class Window;
 
-    class RenderAPIManager :public ModuleBase {
+    class RenderAPIManager :public TModule<RenderAPIManager> {
     public:
-        static RenderAPIManager* Get();
-
         ~RenderAPIManager();
 
         void loadRenderAPI(const std::string& _name, Window* _window);

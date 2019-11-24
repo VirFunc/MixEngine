@@ -4,6 +4,7 @@
 #include <memory>
 #include "MxGPUProgram.h"
 #include <unordered_map>
+#include "../Engine/MxModuleBase.h"
 
 namespace Mix {
     class GPUProgram;
@@ -18,7 +19,7 @@ namespace Mix {
     };
 
 
-    class GPUProgramManager {
+    class GPUProgramManager :public TModule<GPUProgramManager> {
     public:
         void addFactory(std::shared_ptr<GPUProgramFactory> _factory);
 

@@ -2,6 +2,7 @@
 #ifndef MX_GPU_QUERY_H_
 #define MX_GPU_QUERY_H_
 #include <memory>
+#include "../Utils/MxEvent.h"
 
 namespace Mix {
     class CommandBuffer;

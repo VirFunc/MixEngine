@@ -60,11 +60,13 @@ namespace Mix {
 
         std::shared_ptr<GPUProgram> getTessControlProgram() const { return mDesc.programs.tessControl; }
 
+        static std::shared_ptr<GraphicsPipelineState> Create(const GraphicsPipelineStateDesc& _desc);
 
     protected:
+        friend class RenderStateManager;
+
         GraphicsPipelineState(const GraphicsPipelineStateDesc& _desc);
 
-        static std::shared_ptr<GraphicsPipelineState> Create(const GraphicsPipelineStateDesc& _desc);
 
         GraphicsPipelineStateDesc mDesc;
     };
